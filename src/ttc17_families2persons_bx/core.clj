@@ -12,44 +12,58 @@
 
 ;;* The Transformation
 
-(bx/deftransformation families2persons [f p]
+(defn relationshipo [pref-parent f family member parent-rel child-rel]
+  (ccl/conda
+   [(ccl/== pref-parent true)
+    (ccl/conda
+     [(parent-rel f family member)]
+     [(child-rel f family member)])]
+   [(ccl/conda
+     [(child-rel f family member)]
+     [(parent-rel f family member)])]))
+
+(bx/deftransformation families2persons [f p prefer-creating-parent-to-child prefer-existing-family-to-new]
+  :delete-unmatched-target-elements true
+  :id-init-fn bx/number-all-source-model-elements
   (^:top family-register2person-register
-   :left  [(f/FamilyRegister f ?fr)]
-   :right [(p/PersonRegister p ?pr)]
-   :where [(member2female :?fr ?fr :?pr ?pr)
-           (member2male :?fr ?fr :?pr ?pr)])
+   :left  [(f/FamilyRegister f ?fam-reg)]
+   :right [(p/PersonRegister p ?per-reg)]
+   :where [(member2female :?fam-reg ?fam-reg :?per-reg ?per-reg)
+           (member2male :?fam-reg ?fam-reg :?per-reg ?per-reg)])
   (^:abstract member2person
-   :left  [(f/->families f ?fr ?f)
-           (f/Family f ?f)
-           (f/name f ?f ?ln)
-           (f/FamilyMember f ?m)
-           (f/name f ?m ?fn)]
-   :right [(p/->persons p ?pr ?p)
-           (p/Person p ?p)
-           (rel/stro ?ln ", " ?fn ?n)
-           (p/name p ?p ?n)])
+   :when  [(rel/stro ?last-name ", " ?first-name ?n)]
+   :left  [(f/->families f ?fam-reg ?family)
+           (f/Family f ?family)
+           (f/name f ?family ?last-name)
+           (f/FamilyMember f ?member)
+           (f/name f ?member ?first-name)
+           (id ?member ?id)
+           (ccl/conda
+            [(ccl/== prefer-existing-family-to-new true)]
+            [(id ?family ?id)])]
+   :right [(p/->persons p ?per-reg ?person)
+           (p/Person p ?person)
+           (p/name p ?person ?n)
+           (id ?person ?id)])
   (member2female
    :extends [(member2person)]
-   :left  [(ccl/conde
-            [(f/->mother    f ?f ?m)]
-            [(f/->daughters f ?f ?m)])]
-   :right [(p/Female p ?p)])
+   :left  [(relationshipo prefer-creating-parent-to-child f ?family ?member f/->mother f/->daughters)]
+   :right [(p/Female p ?person)])
   (member2male
    :extends [(member2person)]
-   :left  [(ccl/conde
-            [(f/->father p ?f ?m)]
-            [(f/->sons   p ?f ?m)])]
-   :right [(p/Male p ?p)]))
+   :left  [(relationshipo prefer-creating-parent-to-child f ?family ?member f/->father f/->sons)]
+   :right [(p/Male p ?person)]))
 
-;;* Tests
+(comment
+  (emf/load-ecore-resource "metamodels/Families.ecore")
+  (emf/load-ecore-resource "metamodels/Persons.ecore")
 
-(emf/load-ecore-resource "metamodels/Families.ecore")
-(emf/load-ecore-resource "metamodels/Persons.ecore")
-
-(def fm (emf/load-resource "models/FamiliesWithSameName.xmi"))
-(def pm (emf/new-resource))
-
-(def trace (families2persons fm pm :right))
-
-;; (viz/print-model fm :gtk)
-(viz/print-model pm :gtk)
+  (let [fm (emf/new-resource) #_(emf/load-resource "models/FamilyWithDuplicateMember.xmi"
+                                                   #_"models/FamiliesWithSameName.xmi")
+        pm (emf/new-resource)
+        h (emf/ecreate! pm 'Male {:name "Simpson, Homer"})
+        m (emf/ecreate! pm 'Female {:name "Simpson, Marge"})
+        m (emf/ecreate! pm 'PersonRegister {:persons [h m]})
+        trace (families2persons fm pm :left true false)]
+    (viz/print-model fm :gtk)
+    trace))
