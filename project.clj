@@ -1,12 +1,10 @@
-(defproject ttc17-families2persons-bx "0.1.0-SNAPSHOT"
+(defproject ttc17-families2persons-bx "1.0.0"
   :description "A FunnyQT solution to the Families to Persons BX case"
-  :url "http://example.com/FIXME"
+  :url "https://github.com/tsdh/ttc17-families2persons-bx"
   :license {:name "GNU General Public License, Version 3 (or later)"
             :url "http://www.gnu.org/licenses/gpl.html"
             :distribution :repo}
-  :dependencies [[funnyqt "1.1.0"]]
-  ;; :main ^:skip-aot ttc17-families2persons-bx.main
+  :dependencies [[funnyqt "1.1.1"]]
   :target-path "target/%s"
   :profiles {:uberjar {:aot nil}}
-  :uberjar-exclusions [#"org/eclipse/.*"]
-  )
+  :uberjar-exclusions [#"org/eclipse/.*"])
