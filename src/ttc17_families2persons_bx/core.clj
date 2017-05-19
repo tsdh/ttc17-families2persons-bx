@@ -4,12 +4,8 @@
             [funnyqt.relational :as rel]
             [funnyqt.bidi :as bx]))
 
-;;* Generating the API
-
 (rel/generate-metamodel-relations "metamodels/Families.ecore" f)
 (rel/generate-metamodel-relations "metamodels/Persons.ecore" p)
-
-;;* Helper Relations
 
 (defn relationshipo [pref-parent f family member prel crel]
   (ccl/conda
@@ -18,8 +14,6 @@
      (bx/unseto? f family prel member)
      (prel f family member))]
    [(crel f family member)]))
-
-;;* The Transformation
 
 (bx/deftransformation families2persons [f p prefer-parent prefer-ex-family]
   :delete-unmatched-target-elements true
