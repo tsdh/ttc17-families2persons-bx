@@ -12,15 +12,13 @@
 
 ;;* The Transformation
 
-(defn relationshipo [pref-parent f family member parent-rel child-rel]
+(defn relationshipo [pref-parent f family member pref prel crel]
   (ccl/conda
-   [(ccl/== pref-parent true)
-    (ccl/conda
-     [(parent-rel f family member)]
-     [(child-rel f family member)])]
-   [(ccl/conda
-     [(child-rel f family member)]
-     [(parent-rel f family member)])]))
+   [(ccl/all
+     (ccl/== pref-parent true)
+     (bx/unseto? f family pref member)
+     (prel f family member))]
+   [(crel f family member)]))
 
 (bx/deftransformation families2persons [f p prefer-parent-to-child prefer-ex-family-to-new]
   :delete-unmatched-target-elements true
@@ -32,9 +30,9 @@
            (member2male :?fam-reg ?fam-reg :?per-reg ?per-reg)])
   (^:abstract member2person
    :when  [(rel/stro ?last-name ", " ?first-name ?n)]
-   :left  [(f/->families f ?fam-reg ?family)
-           (f/Family f ?family)
+   :left  [(f/Family f ?family)
            (f/name f ?family ?last-name)
+           (f/->families f ?fam-reg ?family)
            (f/FamilyMember f ?member)
            (f/name f ?member ?first-name)
            (id ?member ?id)
@@ -49,28 +47,21 @@
            (id ?person ?id)])
   (member2female
    :extends [(member2person)]
-   :left  [(relationshipo prefer-parent-to-child f ?family ?member f/->mother f/->daughters)]
+   :left  [(relationshipo prefer-parent-to-child f ?family ?member
+                          :mother f/->mother f/->daughters)]
    :right [(p/Female p ?person)])
   (member2male
    :extends [(member2person)]
-   :left  [(relationshipo prefer-parent-to-child f ?family ?member f/->father f/->sons)]
+   :left  [(relationshipo prefer-parent-to-child f ?family ?member
+                          :father f/->father f/->sons)]
    :right [(p/Male p ?person)]))
 
 (comment
-  (defn test-model []
-    (let [m (emf/new-resource)
-          mem1 (emf/ecreate! m 'FamilyMember {:name "Jim"})
-          mem2 (emf/ecreate! m 'FamilyMember {:name "Jill"})
-          f (emf/ecreate! m 'Family {:name "Smith" :father mem1 :mother mem2})
-          fr (emf/ecreate! m 'FamilyRegister {:families [f]})]
-      m))
-
   (emf/load-ecore-resource "metamodels/Families.ecore")
   (emf/load-ecore-resource "metamodels/Persons.ecore")
 
-  (let [fm (test-model)
-        pm (emf/new-resource)
-        _ (viz/print-model fm :gtk)
-        _ (families2persons fm pm :right true true)
-        _ (families2persons fm pm :left true true)]
-    (viz/print-model pm :gtk)))
+  (let [fm (emf/load-resource "FamilyRegister.xmi")
+        pm (emf/load-resource "PersonRegister.xmi")
+        trace (families2persons fm pm :left true true)]
+    (viz/print-model fm :gtk)
+    #_trace))
