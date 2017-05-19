@@ -1,36 +1,15 @@
-# ttc17-families2persons-bx
+# The FunnyQT Solution to the TTC'17 BX Transformation Case
 
-FIXME: description
+This project host's the FunnyQT solution to
+the [Transformation Tool Contest](http://www.transformation-tool-contest.eu/)'s
+bidirectional
+[Families to Persons transformation case](http://www.transformation-tool-contest.eu/cfs.html).
 
-## Installation
-
-Download from http://example.com/FIXME.
-
-## Usage
-
-FIXME: explanation
-
-    $ java -jar ttc17-families2persons-bx-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
+The solution is integrated into
+the [benchmarx framework](https://github.com/eMoflon/benchmarx).
 
 ## License
 
-Copyright © 2017 FIXME
+Copyright © 2017 Tassilo Horn
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the General Public License, version 3 (or later).
