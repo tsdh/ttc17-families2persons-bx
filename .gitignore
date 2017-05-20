@@ -9,3 +9,11 @@ pom.xml.asc
 /.nrepl-port
 .hgignore
 .hg/
+doc/auto/
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+doc/_minted-ttc17-funnyqt-solution/

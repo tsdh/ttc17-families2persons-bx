@@ -1,0 +1,104 @@
+\documentclass[a4paper]{article}
+\usepackage{onecolceurws}
+
+\usepackage[T1]{fontenc}
+\usepackage{varioref}
+\usepackage{hyperref}
+
+\usepackage{url}
+\usepackage{paralist}
+\usepackage{graphicx}
+\usepackage{todonotes}
+
+\usepackage{relsize}
+\usepackage[cache]{minted}
+\setminted{fontsize=\fontsize{8}{8},breaklines=true,breakbytoken=true,autogobble,linenos,numbersep=3pt,numberblanklines=false,firstnumber=last}
+\setmintedinline{fontsize=\relscale{.9},breaklines=true,breakbytoken=true}
+\newminted{clojure}{}
+\newmintinline{clojure}{}
+\newcommand{\code}{\clojureinline}
+\VerbatimFootnotes
+
+\title{Solving the TTC Families to Persons Case with FunnyQT}
+\author{Tassilo Horn\\
+  \href{tsdh@gnu.org}{mailto:tsdh@gnu.org}}
+
+\begin{document}
+%%\maketitle
+
+\begin{abstract}
+  This paper describes the FunnyQT solution to the TTC 2017 Families to Persons
+  bidirectional transformation case.
+\end{abstract}
+
+
+\section{Introduction}
+\label{sec:introduction}
+
+This paper describes the FunnyQT\footnote{\url{http://funnyqt.org}}
+~\cite{diss,funnyqt-icgt15} solution of the TTC 2017 Families to Persons
+case~\cite{f2p-case-desc}.
+
+\todo[inline]{What has been solved?}
+
+The solution project is available on
+Github\footnote{\url{https://github.com/tsdh/ttc17-families2persons-bx}}.
+
+\todo[inline]{What about SHARE???}
+
+FunnyQT is a model querying and transformation library for the functional Lisp
+dialect Clojure\footnote{\url{http://clojure.org}}.  Queries and
+transformations are Clojure programs using the features provided by the FunnyQT
+API.
+
+Clojure provides strong metaprogramming capabilities that are used by FunnyQT
+in order to define several \emph{embedded domain-specific languages} (DSL) for
+different querying and transformation tasks.
+
+FunnyQT is designed with extensibility in mind.  By default, it supports EMF
+models and JGraLab TGraph models.  Support for other modeling frameworks can be
+added without having to touch FunnyQT's internals.
+
+The FunnyQT API is structured into several namespaces, each namespace providing
+constructs supporting concrete querying and transformation use-cases, e.g.,
+model management, functional querying, polymorphic functions, relational
+querying, pattern matching, in-place transformations, out-place
+transformations, bidirectional transformations, and some more.  For solving the
+families to persons case, its bidirectional transformation and relational model
+querying DSLs have been used.
+
+
+\section{Solution Description}
+\label{sec:solution-description}
+
+
+
+\subsection{Gluing the Solution with the Framework}
+\label{sec:gluing}
+
+Typically, open-source Clojure libraries and programs are distributed as JAR
+files that contain the source files rather than byte-compiled class files.
+This solution does the same, and that JAR is deployed to a local Maven
+repository from which the Maven build infrastructure of the benchmark framework
+can pick it up.
+
+
+
+\section{Evaluation \& Conclusion}
+\label{sec:evaluation}
+
+
+
+\bibliographystyle{alpha}
+\bibliography{ttc17-funnyqt-solution}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% TeX-command-extra-options: "-shell-escape"
+%%% LaTeX-verbatim-macros-with-delims-local: ("code")
+%%% End:
+
+%  LocalWords:  parallelizes
