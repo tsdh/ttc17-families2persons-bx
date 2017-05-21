@@ -105,14 +105,17 @@ namespace alias \code|ccl/| denotes \emph{core.logic} constructs and the alias
    (f/name f child name)))
 \end{clojurecode}
 
-A relation like \code|same-named-mother-and-childo| is defined as a plain
-function with a name and a argument vector.  By convention, all generated
-relations require the model being queried as first argument, i.e., \code|f|
-denotes a family model.  The relation describes a \code|family| with a
-\code|mother| having some \code|name|.  Additionally, the \code|family| has a
-daughter or son\footnote{\clojureinline|ccl/conde| is a disjunction where both
-  clauses may succeed.} \code|child| which happens to have the same \code|name|
-as the mother.
+A relation like \code|same-named-mother-and-childo|\footnote{As miniKanren was
+  originally implemented for Scheme which doesn't require a namespace system,
+  it has become a convention to suffix relations with ``o'' to disambiguate
+  them from functions.} is defined as a plain function with a name and a
+argument vector.  By convention, all generated relations require the model
+being queried as first argument, i.e., \code|f| denotes a family model.  The
+relation describes a \code|family| with a \code|mother| having some
+\code|name|.  Additionally, the \code|family| has a daughter or
+son\footnote{\clojureinline|ccl/conde| is a disjunction where both clauses may
+  succeed.} \code|child| which happens to have the same \code|name| as the
+mother.
 
 An application of such a relation (called a \emph{goal}) delivers all possible
 solutions, i.e., all tuples of a family, its mother, a child of the family, and
