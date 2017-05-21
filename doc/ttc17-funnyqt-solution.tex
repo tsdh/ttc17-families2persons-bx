@@ -12,7 +12,7 @@
 
 \usepackage{relsize}
 \usepackage[cache]{minted}
-\setminted{fontsize=\fontsize{8}{8},breaklines=true,breakbytoken=true,autogobble,linenos,numbersep=3pt,numberblanklines=false,firstnumber=last}
+\setminted{fontsize=\fontsize{8}{8},breaklines=true,breakbytoken=true,autogobble,numbersep=3pt,numberblanklines=false}
 \setmintedinline{fontsize=\relscale{.9},breaklines=true,breakbytoken=true}
 \newminted{clojure}{}
 \newmintinline{clojure}{}
@@ -216,7 +216,56 @@ documentation linked from \url{http://funnyqt.org}.
 \subsection{The Families to Persons Transformation}
 \label{sec:f2p-solution}
 
+In this section, the actual FunnyQT transformation is going to be discussed.
+As a first step, relational querying APIs for the two metamodels are generated.
 
+\begin{clojurecode*}{linenos=true}
+(rel/generate-metamodel-relations "metamodels/Families.ecore" f)
+(rel/generate-metamodel-relations "metamodels/Persons.ecore" p)
+\end{clojurecode*}
+
+This makes the relations for the families metamodel available with the
+namespace alias \code|f| and those of the persons metamodel with alias
+\code|p|.
+
+Next, we define some helper relation which defines the possible kinds of
+relationships between a \code|family| and a family \code|member| depending on
+if we prefer to create parents over creating children (parameter
+\code|pref-parent|).  This is a higher-order relation in that the two remaining
+parameters are a parent relation \code|prel| (either \code|f/->father| or
+\code|f/->mother| has to be given) and a child relation (either
+\code|f/->daughters| or \code|f/->sons| has to be given).
+
+\begin{clojurecode*}{linenos=true,firstnumber=last}
+(defn relationshipo [pref-parent f family member prel crel]
+  (ccl/conda
+   [(ccl/all
+     (ccl/conda
+      [(ccl/== pref-parent true)]
+      [(bx/target-directiono :right)])
+     (bx/unseto? f family prel member)
+     (prel f family member))]
+   [(crel f family member)]))
+\end{clojurecode*}
+
+\code|ccl/conda| is like an short-cutting logical OR.  The \(n\)-th clause is
+only tried if all preceeding clauses fail\footnote{In contrast to
+  \code|ccl/conde| which gives every clause a chance to succeed.}.  The first
+clause succeeds if we prefer creating parents or we transform in the direction
+of the persons model\footnote{In this direction, the preference should have no
+  effect.}, and the \code|family|'s parent reference is unset or already set to
+\code|member|, and if \code|(prel f family member)| succeeds which is the case
+if \code|member| is already in the parent role of \code|family| or has been
+assigned to this role just now.
+
+In all other cases, \code|member| must be contained in the collection of
+members in the children role denoted by \code|crel| of the \code|family|.
+
+\begin{clojurecode*}{linenos=true,firstnumber=last}
+(bx/deftransformation families2persons [f p prefer-parent prefer-ex-family]
+  :delete-unmatched-target-elements true
+  :id-init-fn bx/number-all-source-model-elements
+\end{clojurecode*}
 
 \subsection{Gluing the Solution with the Framework}
 \label{sec:gluing}

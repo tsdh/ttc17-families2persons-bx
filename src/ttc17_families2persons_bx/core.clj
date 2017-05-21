@@ -10,7 +10,9 @@
 (defn relationshipo [pref-parent f family member prel crel]
   (ccl/conda
    [(ccl/all
-     (ccl/== pref-parent true)
+     (ccl/conda
+      [(ccl/== pref-parent true)]
+      [(bx/target-directiono :right)])
      (bx/unseto? f family prel member)
      (prel f family member))]
    [(crel f family member)]))
