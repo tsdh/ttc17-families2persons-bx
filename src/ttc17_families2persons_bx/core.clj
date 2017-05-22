@@ -28,10 +28,9 @@
            (member2male :?family-register ?family-register
                         :?person-register ?person-register)])
   (^:abstract member2person
-   :when  [(rel/stro ?last-name ", " ?first-name ?n)]
-   :left  [(f/Family f ?family)
+   :left  [(f/->families f ?family-register ?family)
+           (f/Family f ?family)
            (f/name f ?family ?last-name)
-           (f/->families f ?family-register ?family)
            (f/FamilyMember f ?member)
            (f/name f ?member ?first-name)
            (id ?member ?id)
@@ -41,8 +40,9 @@
             [(id ?family ?id)])]
    :right [(p/->persons p ?person-register ?person)
            (p/Person p ?person)
-           (p/name p ?person ?n)
-           (id ?person ?id)])
+           (p/name p ?person ?full-name)
+           (id ?person ?id)]
+   :when  [(rel/stro ?last-name ", " ?first-name ?full-name)])
   (member2female
    :extends [(member2person)]
    :left  [(relationshipo prefer-parent f ?family ?member f/->mother f/->daughters)]

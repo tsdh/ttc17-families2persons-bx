@@ -334,29 +334,51 @@ checked in checkonly mode), then the two transformation relations
 \code|member2female| and \code|member2male| have to be enforced (or tested)
 between the current \code|?family-register| and
 \code|?person-register|\footnote{Transformation relations are called with
-  keyword parameters.  These calls say that the current \code|?family-register|
-  will be bound to the logic variable with the same name in the called
-  relation.}.
+  keyword parameters.  The two calls in the \code|:where| clause say that the
+  current \code|?family-register| will be bound to the logic variable with the
+  same name in the called relation, and the same is true for the
+  \code|?person-register|.}.
+
+The next transformation relation, \code|member2person|, describes how family
+members of a family contained in a family register in the left model correspond
+to persons contained in a person register in the right model.  As can be seen,
+there's no goal describing how the \code|?family| and the \code|?member| are
+connected in the \code|:left| clause, and in the \code|:right| clause we're
+dealing just with a \code|?person| of class \code|Person| which is abstract.
+As such, this relation is not sufficient for the complete synchronization
+between members in the different roles of a family to females and males.
+Instead, it only captures the aspects that are common in the cases where
+mothers and daughters are synchronized with females and fathers and sons are
+synchronized with males.  Therefore, this relation is declared abstract.
 
 \begin{clojurecode*}{linenos=true,firstnumber=last}
   (^:abstract member2person
-   :when  [(rel/stro ?last-name ", " ?first-name ?n)]
-   :left  [(f/Family f ?family)
+   :left  [(f/->families f ?family-register ?family)
+           (f/Family f ?family)
            (f/name f ?family ?last-name)
-           (f/->families f ?family-register ?family)
            (f/FamilyMember f ?member)
            (f/name f ?member ?first-name)
            (id ?member ?id)
            (ccl/conda
-            [(ccl/conde
-              [(ccl/== prefer-ex-family true)]
-              [(bx/existing-elemento? ?member)])]
+            [(ccl/== prefer-ex-family true)]
+            [(bx/existing-elemento? ?member)]
             [(id ?family ?id)])]
    :right [(p/->persons p ?person-register ?person)
            (p/Person p ?person)
-           (p/name p ?person ?n)
-           (id ?person ?id)])
+           (p/name p ?person ?full-name)
+           (id ?person ?id)]
+   :when  [(rel/stro ?last-name ", " ?first-name ?full-name)])
 \end{clojurecode*}
+
+So what are these common aspects?  Well, a \code|?member| of a \code|?family|
+(where we haven't determined the role yet) contained in the
+\code|?family-register| passed in as parameter from
+\code|family-register2person-register| corresponds to a \code|?person| (where
+we haven't determined the gender yet) contained in the \code|?person-register|
+passed in as the other parameter from \code|family-register2person-register|.
+The \code|:when| clause defines that the concatenation of the \code|?family|'s
+\code|?last-name|, the string \code|", "| and the \code|?member|'s
+\code|?first-name| gives the \code|?full-name| of the \code|?person|.
 
 
 \subsection{Gluing the Solution with the Framework}
