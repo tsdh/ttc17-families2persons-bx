@@ -23,10 +23,8 @@
   (^:top family-register2person-register
    :left  [(f/FamilyRegister f ?family-register)]
    :right [(p/PersonRegister p ?person-register)]
-   :where [(member2female :?family-register ?family-register
-                          :?person-register ?person-register)
-           (member2male :?family-register ?family-register
-                        :?person-register ?person-register)])
+   :where [(member2female :?family-register ?family-register :?person-register ?person-register)
+           (member2male :?family-register ?family-register :?person-register ?person-register)])
   (^:abstract member2person
    :left  [(f/->families f ?family-register ?family)
            (f/Family f ?family)

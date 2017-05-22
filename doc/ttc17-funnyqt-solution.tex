@@ -12,10 +12,11 @@
 
 \usepackage{relsize}
 \usepackage[cache]{minted}
-\setminted{fontsize=\fontsize{8}{8},breaklines=true,breakbytoken=true,autogobble,numbersep=3pt,numberblanklines=false}
+\setminted{fontsize=\fontsize{8}{8},breaklines=true,breakbytoken=true,numbersep=5pt,numberblanklines=false}
 \setmintedinline{fontsize=\relscale{.9},breaklines=true,breakbytoken=true}
 \newminted{clojure}{}
 \newmintinline{clojure}{}
+\newminted{java}{}
 \newcommand{\code}{\clojureinline}
 \VerbatimFootnotes
 
@@ -27,9 +28,10 @@
 \maketitle
 
 \begin{abstract}
-  This paper describes the FunnyQT solution to the TTC 2017 Families to Persons
-  bidirectional transformation case.  The solution passes all batch
-  transformation tests and some of the incremental tests.
+  This paper describes the FunnyQT solution to the bidirectional TTC 2017
+  Families to Persons transformation case.  The solution is really simple and
+  concise and passes all batch transformation and some of the incremental
+  tests.
 \end{abstract}
 
 
@@ -38,14 +40,11 @@
 
 This paper describes the FunnyQT\footnote{\url{http://funnyqt.org}}
 ~\cite{diss,funnyqt-icgt15} solution of the TTC 2017 Families to Persons
-case~\cite{f2p-case-desc}.  With only 49 lines of declarative code, the
+case~\cite{f2p-case-desc}.  With only 48 lines of declarative code, the
 solution is able to pass all batch transformation tests and some of the
-incremental tests.
-
-The solution project is available on
+incremental tests.  The solution project is available on
 Github\footnote{\url{https://github.com/tsdh/ttc17-families2persons-bx}}.
 
-\todo[inline]{What about SHARE???}
 
 FunnyQT is a model querying and transformation library for the functional Lisp
 dialect Clojure\footnote{\url{http://clojure.org}}.  Queries and
@@ -317,10 +316,8 @@ transforms between family and person registers.
   (^:top family-register2person-register
    :left  [(f/FamilyRegister f ?family-register)]
    :right [(p/PersonRegister p ?person-register)]
-   :where [(member2female :?family-register ?family-register
-                          :?person-register ?person-register)
-           (member2male :?family-register ?family-register
-                        :?person-register ?person-register)])
+   :where [(member2female :?family-register ?family-register :?person-register ?person-register)
+           (member2male :?family-register ?family-register :?person-register ?person-register)])
 \end{clojurecode*}
 
 It is defined as a top-level rule meaning that it'll be executed as the
@@ -380,17 +377,107 @@ The \code|:when| clause defines that the concatenation of the \code|?family|'s
 \code|?last-name|, the string \code|", "| and the \code|?member|'s
 \code|?first-name| gives the \code|?full-name| of the \code|?person|.
 
+What hasn't been described so far are the \code|id| goals in lines 26, and 34
+and the \code|ccl/conda| goal starting in line 27.  The first two define that
+the \code|?member| and the corresponding \code|?person| must have the same
+synthetic ID.  Remember the \code|:id-init-fn| in line 14 which assigned a
+unique number to every element in the respective source model of the
+transformation.  With these synthetic IDs, the transformation is able to create
+one person for every member and vice versa even in the case where two elements
+are equal based on attribute values.
+
+Lastly, the \code|ccl/conda| goal starting in line 29 of the \code|:left|
+clause handles the preference of re-using existing families, i.e., assigning
+new members to existing families, over creating new families for new members.
+By default, FunnyQT would always try to re-use an existing family.  Thus, if
+the \code|prefer-ex-family| parameter is \code|true|, nothing needs to be done.
+Likewise, if \code|?member| is an existing element for which we assume she's
+already assigned to some family, we can also just stick to the default
+behavior.  If the first two \code|ccl/conda| clauses fail, i.e.,
+\code|prefer-ex-family| is false and \code|?member| is a new member which is
+just going to be created by the enforcement of this relation, then we define
+that the \code|?family|'s ID must equal the IDs of the \code|?member| and
+\code|?person|.  Thus, in this case and only in this case, new members force
+the creation of a new family even when there already is a family with the right
+name.
+
+The last two transformation relations extend the \code|member2person| relation
+for synchronizing between members in the role of a family mother or dauhter and
+female persons, and between family fathers or sons and male persons.
+
+\begin{clojurecode*}{linenos=true,firstnumber=last}
+  (member2female
+   :extends [(member2person)]
+   :left  [(relationshipo prefer-parent f ?family ?member f/->mother f/->daughters)]
+   :right [(p/Female p ?person)])
+  (member2male
+   :extends [(member2person)]
+   :left  [(relationshipo prefer-parent f ?family ?member f/->father f/->sons)]
+   :right [(p/Male p ?person)]))
+\end{clojurecode*}
+
+In the \code|:left| clauses we use the \code|relationshipo| helper relation
+described in the beginning of this section which chooses the right female or
+male role based on the preference parameter \code|prefer-parent| and the
+current state of the family, i.e., by checking if the respective parental role
+is still unset.  In the two \code|:right| clauses, we only need to specify that
+the \code|Person| \code|?person| is actually a \code|Female| or \code|Male|.
+
+These 32 lines of transformation specification plus the 9 lines for the
+\code|relationshipo| helper and two lines for the generation of the
+metamodel-specific relational querying APIs form the complete functional parts
+of the solution.  The only thing omitted from the paper are the namespace
+declaration\footnote{The Clojure equivalent of package statement and imports.}
+consisting of 5 lines of code.
+
 
 \subsection{Gluing the Solution with the Framework}
 \label{sec:gluing}
 
 Typically, open-source Clojure libraries and programs are distributed as JAR
 files that contain the source files rather than byte-compiled class files.
-This solution does the same, and that JAR is deployed to a local Maven
-repository from which the Maven build infrastructure of the benchmark framework
-can pick it up.
+This solution does almost the same except that the JAR contains the solution
+source code, FunnyQT itself (also as sources) and every dependency of FunnyQT
+(like Clojure) except for EMF which the \emph{benchmarx} project already
+provides.
 
+Calling Clojure functions from Java is really easy and FunnyQT transformations
+are no exception because they are plain Clojure functions, too.  The FunnyQT
+solution's \code|BXTool| implementation \code|FunnyQTFamiliesToPerson| extends
+the \code|BXToolForEMF| class.  Essentially, it just has a static member
+\code|T| which is set to the transformation.
 
+\begin{javacode}
+public class FunnyQTFamiliesToPerson extends BXToolForEMF<FamilyRegister, PersonRegister, Decisions> {
+    private final static Keyword LEFT = (Keyword) Clojure.read(":left");
+    private final static Keyword RIGHT = (Keyword) Clojure.read(":right");
+
+    private final static IFn T;
+
+    static {
+        final String transformationNamespace = "ttc17-families2persons-bx.core";
+        // Clojure's require is similar to Java's import.  However, it also loads the required
+        // namespace from a source code file and immediately compiles it.
+        final IFn require = Clojure.var("clojure.core", "require");
+        require.invoke(Clojure.read(transformationNamespace));
+        T = Clojure.var(transformationNamespace, "families2persons");
+    }
+\end{javacode}
+
+All Clojure functions implement the \code|IFn| interface and can be called
+using \code|invoke()|.  And exactly this is done to call the transformation.
+
+\begin{javacode}
+    private void transform(Keyword direction) {
+        T.invoke(srcModel, trgModel, direction,
+                configurator.decide(Decisions.PREFER_CREATING_PARENT_TO_CHILD),
+                configurator.decide(Decisions.PREFER_EXISTING_FAMILY_TO_NEW));
+    }
+\end{javacode}
+
+This corresponds to a call
+\code|(families2persons src trg dir prefer-parent prefer-ex-family)| directly
+in Clojure.
 
 \section{Evaluation \& Conclusion}
 \label{sec:evaluation}
