@@ -264,11 +264,100 @@ assigned to this role just now.
 In all other cases, \code|member| must be contained in the collection of
 members in the children role denoted by \code|crel| of the \code|family|.
 
+In the following, the actual transformation definition is explained.  It starts
+with the following.
+
 \begin{clojurecode*}{linenos=true,firstnumber=last}
 (bx/deftransformation families2persons [f p prefer-parent prefer-ex-family]
   :delete-unmatched-target-elements true
   :id-init-fn bx/number-all-source-model-elements
 \end{clojurecode*}
+
+The transformation's name is \code|families2persons| and it declares four
+parameters.  The parameter \code|f| is the family model (the left model),
+\code|p| is the persons model (the right model), \code|prefer-parent| is a
+boolean flag determining if we prefer creating parents to creating children,
+and \code|prefer-ex-family| is a boolean flag, too, determining if we prefer
+re-using existing families over creating new families for new family members.
+
+By default, bidirectional FunnyQT transformations will never delete elements
+from the current target model, i.e., the model in whose direction the
+synchronization is performed.  The reason for that behavior is that it allows
+to run the transformation first in one direction and then in the other
+direction in order to perform a full synchronization where missing elements are
+created in each of the two models.  Thus, after running a transformation, e.g.,
+in the direction of the right model, it is only ensured that for each element
+(considered by the transformation's rules), there is a corresponding
+counterpart in the right model.  However, the right model might still contain
+elements which have no counterpart in the left model.  With option
+\code|:delete-unmatched-target-elements|set to \code|true|, this behavior is
+changed.  Elements in the current target model which are not required by the
+current source model and the transformation relations are deleted.
+
+The next option, \code|:id-init-fn|, has the following purpose.  In this
+transformation case, family members and persons don't have some kind of unique
+identity.  For example, it is allowed to have two members named Jim with the
+same name in the very same family Smith.  With FunnyQT BX transformations'
+forall-there-exists semantics, it would suffice to create just one person in
+the right model with the name set to ``Smith, Jim''.  However, the case
+description mandates that we create one person for every member and vice versa,
+no matter if they can be distinguished based on their attribute values.  For
+such scenarios, FunnyQT's bidirectional transformation DSL provides a concept
+of synthetic ID attributes.  The value of \code|:id-init-fn| has to be a
+function which returns a map from elements to their synthetic IDs.  The
+built-in function \code|bx/number-all-source-model-elements| returns a map
+where every element in the source model gets assigned a unique integer number.
+These synthetic IDs are then used in a transformation relation which is
+discussed further below.
+
+The first transformation relation, \code|family-register2person-register|,
+transforms between family and person registers.
+
+\begin{clojurecode*}{linenos=true,firstnumber=last}
+  (^:top family-register2person-register
+   :left  [(f/FamilyRegister f ?family-register)]
+   :right [(p/PersonRegister p ?person-register)]
+   :where [(member2female :?family-register ?family-register
+                          :?person-register ?person-register)
+           (member2male :?family-register ?family-register
+                        :?person-register ?person-register)])
+\end{clojurecode*}
+
+It is defined as a top-level rule meaning that it'll be executed as the
+transformation's entry point.  It's \code|:left| and \code|:right| clauses
+describe that for every \code|?family-register| there has to be a
+\code|?person-register| and vice versa.  We assume that there's always just one
+register in each model.
+
+The \code|:where| clause defines that after this relation has been enforced (or
+checked in checkonly mode), then the two transformation relations
+\code|member2female| and \code|member2male| have to be enforced (or tested)
+between the current \code|?family-register| and
+\code|?person-register|\footnote{Transformation relations are called with
+  keyword parameters.  These calls say that the current \code|?family-register|
+  will be bound to the logic variable with the same name in the called
+  relation.}.
+
+\begin{clojurecode*}{linenos=true,firstnumber=last}
+  (^:abstract member2person
+   :when  [(rel/stro ?last-name ", " ?first-name ?n)]
+   :left  [(f/Family f ?family)
+           (f/name f ?family ?last-name)
+           (f/->families f ?family-register ?family)
+           (f/FamilyMember f ?member)
+           (f/name f ?member ?first-name)
+           (id ?member ?id)
+           (ccl/conda
+            [(ccl/conde
+              [(ccl/== prefer-ex-family true)]
+              [(bx/existing-elemento? ?member)])]
+            [(id ?family ?id)])]
+   :right [(p/->persons p ?person-register ?person)
+           (p/Person p ?person)
+           (p/name p ?person ?n)
+           (id ?person ?id)])
+\end{clojurecode*}
+
 
 \subsection{Gluing the Solution with the Framework}
 \label{sec:gluing}

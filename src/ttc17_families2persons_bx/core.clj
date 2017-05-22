@@ -36,9 +36,8 @@
            (f/name f ?member ?first-name)
            (id ?member ?id)
            (ccl/conda
-            [(ccl/conde
-              [(ccl/== prefer-ex-family true)]
-              [(bx/existing-elemento? ?member)])]
+            [(ccl/== prefer-ex-family true)]
+            [(bx/existing-elemento? ?member)]
             [(id ?family ?id)])]
    :right [(p/->persons p ?person-register ?person)
            (p/Person p ?person)
