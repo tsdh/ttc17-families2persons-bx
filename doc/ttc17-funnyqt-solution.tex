@@ -482,6 +482,60 @@ in Clojure.
 \section{Evaluation \& Conclusion}
 \label{sec:evaluation}
 
+\begin{description}
+\item[BatchForward.*] All tests result in an \emph{expected pass}.
+\item[BatchBwdEandP.*] All tests result in an \emph{expected pass}.
+\item[BatchBwdEnotP.*] All tests result in an \emph{expected pass}.
+\item[BatchBwdNotEandP.*] All tests result in an \emph{expected pass}.
+\item[BatchBwdNotEnotP.*] All tests result in an \emph{expected pass}.
+\item[IncrementalForward.testStability] This is an \emph{expected pass};
+  re-running the transformation after a no-op operation doesn't change the
+  target model.
+\item[IncrementalForward.testIncrementalMixed] This is an \emph{expected fail}.
+  In this test, after transforming forward, father Homer's birthday is changed
+  in the target model, then father Homer is deleted and immediately re-created,
+  and the transformation is run again.  Since the transformation doesn't
+  consider birthdays at all, the existing homer with the changed birthday is
+  still ok and not modified.  Thus, he still has the changed and not the
+  default birthday.
+\item[IncrementalForward.testHippocraticness] This is an \emph{expected pass}.
+  Empty families are of no relevance to the transformation, so creating an
+  empty family and re-running the transformation has no effect on the target
+  model.
+\item[IncrementalForward.testIncrementalMove] This is an \emph{expected fail}.
+  Here, the birthdays are set manually in the persons model.  Then two members
+  are moved in the source model and the transformation is re-exectued.  This
+  leads to creating two new persons and deleting the old ones in the target
+  model.  Of course, the two new persons again have the default birthday.
+\item[IncrementalForward.testIncrementalDeletions] This is an \emph{expected
+    fail}.  Here, after the initial transformation which creates two Barts in
+  the persons model, their birthdays are set to different values.  Then, one
+  Bart is deleted in the family model and the transformation is re-executed.
+  The solution deletes the wrong one because from the perspective of the
+  transformation, both are completely equivalent (since it doesn't consider
+  birthdays).
+\item[IncrementalForward.testIncrementalDeletions] This is an \emph{expected
+    fail}.  After an intial transformation, all birthdays are changed in the
+  person model.  Then, the source model family is renamed, and the
+  transformation is re-executed.  This leads to deletion of all persons and
+  their re-creation with the new full names.  Obviously, the manually set
+  birthdays are lost.
+\item[IncrementalForward.testIncrementalInserts] This is an \emph{expected
+    pass}.  After an intial transformation, all birthdays are changed in the
+  person model.  Then, a new member is added to the source model family and the
+  transformation is re-executed.  A new person is created and the others aren't
+  changed, i.e., they also keep their manually set birthdays.
+\item[IncrementalForward.testIncrementalMoveRoleChange] This is an
+  \emph{expected fail}.  After an intial transformation, all birthdays are
+  changed in the person model.  Then, daughter is moved to a different family
+  as a son, and the transformation is re-executed.  This leads to the deletion
+  of the corresponding female and creation of a new male and the manually set
+  birthday is lost.
+\item[IncrementalBackward.testIncrementalInsertsDynamicConfig] This is an
+  \emph{expected fail} because in the case of not preferring existing families
+  but preferring assignment to parental roles over children roles, the
+  transformation
+\end{description}
 
 
 \bibliographystyle{alpha}
