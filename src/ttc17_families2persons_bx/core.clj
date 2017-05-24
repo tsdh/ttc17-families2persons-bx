@@ -9,12 +9,14 @@
 
 (defn relationshipo [pref-parent f family member prel crel]
   (ccl/conda
-   [(ccl/all
-     (ccl/conda
-      [(ccl/== pref-parent true)]
-      [(bx/target-directiono :right)])
-     (bx/unseto? f family prel member)
-     (prel f family member))]
+   [(bx/target-directiono :right)
+    (ccl/conde
+     [(prel f family member)]
+     [(crel f family member)])]
+   [(ccl/== pref-parent false)
+    (crel f family member)]
+   [(bx/unseto? f family prel member)
+    (prel f family member)]
    [(crel f family member)]))
 
 (bx/deftransformation families2persons [f p prefer-parent prefer-ex-family]
@@ -31,7 +33,9 @@
            (f/name f ?family ?last-name)
            (f/FamilyMember f ?member)
            (f/name f ?member ?first-name)
+           (funnyqt.relational.util/printo "id" ?member ?id)
            (id ?member ?id)
+           (funnyqt.relational.util/printo "succeed")
            (ccl/conda
             [(ccl/== prefer-ex-family true)]
             [(bx/existing-elemento? ?member)]
