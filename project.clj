@@ -4,7 +4,7 @@
   :license {:name "GNU General Public License, Version 3 (or later)"
             :url "http://www.gnu.org/licenses/gpl.html"
             :distribution :repo}
-  :dependencies [[funnyqt "1.1.4"]]
+  :dependencies [[funnyqt "1.1.5"]]
   :target-path "target/%s"
   :profiles {:uberjar {:aot nil}}
   :uberjar-exclusions [#"org/eclipse/.*"])

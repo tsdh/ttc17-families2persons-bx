@@ -13,6 +13,7 @@
     (ccl/conde
      [(prel f family member)]
      [(crel f family member)])]
+   [(bx/existing-elemento? member)]
    [(ccl/== pref-parent false)
     (crel f family member)]
    [(bx/unseto? f family prel member)
