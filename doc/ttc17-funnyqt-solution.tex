@@ -532,15 +532,36 @@ in Clojure.
   of the corresponding female and creation of a new male and the manually set
   birthday is lost.
 \item[IncrementalBackward.testIncrementalInsertsDynamicConfig] This is kind of
-  an \emph{expected fail} because the preferences don't work exactly as
-  required in the case description.  If we prefer to 
+  an \emph{unexpected fail}.  When we neither prefer existing families nor
+  assigning to parental roles, it still adds the new Seymore to an existing
+  family in a parental role.  I haven't found the cause yet\footnote{The author
+    has just become father a second time, so there have been more important
+    things to do.}.
 \item[IncrementalBackward.testStability] This is an \emph{expected pass};
   re-running the transformation after a no-op operation doesn't change the
   target model.
-\item[IncrementalBackward.testIncrementalInsertsFixedConfig] This is kind of an
-  \emph{unexpected pass} in the same way testIncrementalInsertsDynamicConfig
-  was an unexpected fail.
-\item[IncrementalBackward.testIncrementalMixedDynamic] 
+\item[IncrementalBackward.testIncrementalInsertsFixedConfig] This is an
+  \emph{expected pass}.
+\item[IncrementalBackward.testIncrementalMixedDynamic] This is an
+  \emph{expected fail}.  Here, Homer is deleted and re-created anew, and then
+  the transformation is re-executed with preference for child roles.  Since
+  FunnyQT is not incremental, the model looks unchanged and Home stays in his
+  original father role.
+\item[IncrementalBackward.testIncrementalOperational] This is probably an
+  \emph{expected pass} because FunnyQT uses standard EMF iterators which
+  iterate elements in insertion order (unless the ELists are sorted
+  afterwards).
+\item[IncrementalBackward.testRenamingDynamic] This is an \emph{expected fail}.
+  Since FunnyQT's bx transformations are state-based, renaming leads to
+  deletion and re-creation of members if only the first name changed, or
+  complete families including the changed members if their family name changed.
+\item[IncrementalBackward.testHippocraticness] This is an \emph{expected pass}.
+  Re-running the transformation a second time with unchanged source model won't
+  change the target model.
+\item[IncrementalBackward.testIncrementalDeletions] This is an \emph{expected
+    fail}.  Every person is deleted.  Therefore, no family is required by the
+  transformation in the family model and we end up with an empty family
+  register, not with a family register still containing an empty family.
 \end{description}
 
 

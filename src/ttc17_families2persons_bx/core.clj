@@ -37,7 +37,8 @@
            (id ?member ?id)
            (ccl/conda
             [(ccl/== prefer-ex-family true)]
-            [(bx/existing-elemento? ?member) (id ?family -1)]
+            [(bx/existing-elemento? ?member)
+             (id ?family ?last-name)]
             [(id ?family ?id)])]
    :right [(p/->persons p ?person-register ?person)
            (p/Person p ?person)
