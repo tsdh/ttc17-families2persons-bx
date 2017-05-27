@@ -33,12 +33,10 @@
            (f/name f ?family ?last-name)
            (f/FamilyMember f ?member)
            (f/name f ?member ?first-name)
-           (funnyqt.relational.util/printo "id" ?member ?id)
            (id ?member ?id)
-           (funnyqt.relational.util/printo "succeed")
            (ccl/conda
             [(ccl/== prefer-ex-family true)]
-            [(bx/existing-elemento? ?member)]
+            [(bx/existing-elemento? ?member) (id ?family -1)]
             [(id ?family ?id)])]
    :right [(p/->persons p ?person-register ?person)
            (p/Person p ?person)

@@ -504,7 +504,7 @@ in Clojure.
   model.
 \item[IncrementalForward.testIncrementalMove] This is an \emph{expected fail}.
   Here, the birthdays are set manually in the persons model.  Then two members
-  are moved in the source model and the transformation is re-exectued.  This
+  are moved in the source model and the transformation is re-executed.  This
   leads to creating two new persons and deleting the old ones in the target
   model.  Of course, the two new persons again have the default birthday.
 \item[IncrementalForward.testIncrementalDeletions] This is an \emph{expected
@@ -531,10 +531,16 @@ in Clojure.
   as a son, and the transformation is re-executed.  This leads to the deletion
   of the corresponding female and creation of a new male and the manually set
   birthday is lost.
-\item[IncrementalBackward.testIncrementalInsertsDynamicConfig] This is an
-  \emph{expected fail} because in the case of not preferring existing families
-  but preferring assignment to parental roles over children roles, the
-  transformation
+\item[IncrementalBackward.testIncrementalInsertsDynamicConfig] This is kind of
+  an \emph{expected fail} because the preferences don't work exactly as
+  required in the case description.  If we prefer to 
+\item[IncrementalBackward.testStability] This is an \emph{expected pass};
+  re-running the transformation after a no-op operation doesn't change the
+  target model.
+\item[IncrementalBackward.testIncrementalInsertsFixedConfig] This is kind of an
+  \emph{unexpected pass} in the same way testIncrementalInsertsDynamicConfig
+  was an unexpected fail.
+\item[IncrementalBackward.testIncrementalMixedDynamic] 
 \end{description}
 
 
