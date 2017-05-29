@@ -40,10 +40,15 @@
 
 This paper describes the FunnyQT\footnote{\url{http://funnyqt.org}}
 ~\cite{diss,funnyqt-icgt15} solution of the TTC 2017 Families to Persons
-case~\cite{f2p-case-desc}.  With only 48 lines of declarative code, the
+case~\cite{f2p-case-desc}.  With only 52 lines of declarative code, the
 solution is able to pass all batch transformation tests and some of the
 incremental tests.  The solution project is available on
-Github\footnote{\url{https://github.com/tsdh/ttc17-families2persons-bx}}.
+Github\footnote{\url{https://github.com/tsdh/ttc17-families2persons-bx}}, and
+there's a SHARE
+demo\footnote{\url{http://is.ieis.tue.nl/staff/pvgorp/share/?page=ConfigureNewSession&vdi=Ubuntu12LTS_BenchmarX_FunnyQT.vdi}}
+which includes both the transformation source code and the
+\emph{benchmarx}\footnote{\url{https://github.com/eMoflon/benchmarx/}} testing
+framework with the integrated FunnyQT solution.
 
 
 FunnyQT is a model querying and transformation library for the functional Lisp
@@ -241,27 +246,46 @@ parameters are a parent relation \code|prel| (either \code|f/->father| or
 \begin{clojurecode*}{linenos=true,firstnumber=last}
 (defn relationshipo [pref-parent f family member prel crel]
   (ccl/conda
-   [(ccl/all
-     (ccl/conda
-      [(ccl/== pref-parent true)]
-      [(bx/target-directiono :right)])
-     (bx/unseto? f family prel member)
-     (prel f family member))]
-   [(crel f family member)]))
+   [(bx/target-directiono :right)     ;; (1)
+    (ccl/conde
+     [(prel f family member)]
+     [(crel f family member)])]
+   [(bx/existing-elemento? member)]   ;; (2)
+   [(ccl/== pref-parent false)        ;; (3)
+    (crel f family member)]
+   [(bx/unseto? f family prel member) ;; (4)
+    (prel f family member)]
+   [(crel f family member)]))         ;; (5)
 \end{clojurecode*}
 
-\code|ccl/conda| is like an short-cutting logical OR.  The \(n\)-th clause is
+\code|ccl/conda| is like a short-cutting logical OR.  The \(n\)-th clause is
 only tried if all preceeding clauses fail\footnote{In contrast to
   \code|ccl/conde| which gives every clause a chance to succeed.}.  The first
-clause succeeds if we prefer creating parents or we transform in the direction
-of the persons model\footnote{In this direction, the preference should have no
-  effect.}, and the \code|family|'s parent reference is unset or already set to
-\code|member|, and if \code|(prel f family member)| succeeds which is the case
-if \code|member| is already in the parent role of \code|family| or has been
-assigned to this role just now.
+clause succeeds when we are transforming into the direction of the right model,
+i.e., the person register.  In this case, \code|member| may be in a parental
+role of family (\code|prel|), or it might be in a child role (\code|crel|).  We
+don't really care but want to ensure that all members of the given
+\code|family| are reachable, thus we use a non-short-cutting \code|ccl/conde|.
+All other clauses deal with transforming in the direction of the family model.
 
-In all other cases, \code|member| must be contained in the collection of
-members in the children role denoted by \code|crel| of the \code|family|.
+The second clause deals with the case where \code|member| is an already
+existing element, i.e., not coming into being by the current execution of the
+transformation.  Here, we assume that this member is already properly assigned
+to a family, so we simply succeed without doing anything.
+
+In clause three, if we do not prefer assigning to parental roles, then the
+child relation \code|crel| must succeed between the \code|family| and the
+\code|member|.
+
+In the fourth clause, if the \code|family|'s parental role is still unset or
+already assigned to \code|member|, then the parental relation must succeed
+between the \code|family| and the \code|member|.
+
+Lastly, if no clause has succeeded until now, then the child relation has to
+succeed.  Since a family can have an arbitrary number of children, this goal
+can always succeed.
+
+\bigskip{}
 
 In the following, the actual transformation definition is explained.  It starts
 with the following.
@@ -358,7 +382,8 @@ synchronized with males.  Therefore, this relation is declared abstract.
            (id ?member ?id)
            (ccl/conda
             [(ccl/== prefer-ex-family true)]
-            [(bx/existing-elemento? ?member)]
+            [(bx/existing-elemento? ?member)
+             (id ?family ?last-name)]
             [(id ?family ?id)])]
    :right [(p/->persons p ?person-register ?person)
            (p/Person p ?person)
@@ -368,38 +393,39 @@ synchronized with males.  Therefore, this relation is declared abstract.
 \end{clojurecode*}
 
 So what are these common aspects?  Well, a \code|?member| of a \code|?family|
-(where we haven't determined the role yet) contained in the
+(where we haven't determined the role, yet) contained in the
 \code|?family-register| passed in as parameter from
 \code|family-register2person-register| corresponds to a \code|?person| (where
-we haven't determined the gender yet) contained in the \code|?person-register|
+we haven't determined the gender, yet) contained in the \code|?person-register|
 passed in as the other parameter from \code|family-register2person-register|.
 The \code|:when| clause defines that the concatenation of the \code|?family|'s
 \code|?last-name|, the string \code|", "| and the \code|?member|'s
 \code|?first-name| gives the \code|?full-name| of the \code|?person|.
 
-What hasn't been described so far are the \code|id| goals in lines 26, and 34
-and the \code|ccl/conda| goal starting in line 27.  The first two define that
+What hasn't been described so far are the \code|id| goals in lines 29, and 34
+and the \code|ccl/conda| goal starting in line 30.  The first two define that
 the \code|?member| and the corresponding \code|?person| must have the same
-synthetic ID.  Remember the \code|:id-init-fn| in line 14 which assigned a
+synthetic ID.  Remember the \code|:id-init-fn| in line 17 which assigned a
 unique number to every element in the respective source model of the
 transformation.  With these synthetic IDs, the transformation is able to create
 one person for every member and vice versa even in the case where two elements
 are equal based on attribute values.
 
-Lastly, the \code|ccl/conda| goal starting in line 29 of the \code|:left|
+Lastly, the \code|ccl/conda| goal starting in line 30 of the \code|:left|
 clause handles the preference of re-using existing families, i.e., assigning
 new members to existing families, over creating new families for new members.
 By default, FunnyQT would always try to re-use an existing family.  Thus, if
 the \code|prefer-ex-family| parameter is \code|true|, nothing needs to be done.
 Likewise, if \code|?member| is an existing element for which we assume she's
-already assigned to some family, we can also just stick to the default
-behavior.  If the first two \code|ccl/conda| clauses fail, i.e.,
-\code|prefer-ex-family| is false and \code|?member| is a new member which is
-just going to be created by the enforcement of this relation, then we define
-that the \code|?family|'s ID must equal the IDs of the \code|?member| and
-\code|?person|.  Thus, in this case and only in this case, new members force
-the creation of a new family even when there already is a family with the right
-name.
+already assigned to some family, we can also just stick to the default behavior
+but define the \code|?family|'s ID to be its name (although it's probably not
+unique).  If the first two \code|ccl/conda| clauses fail, i.e.,
+\code|prefer-ex-family| is \code|false| and \code|?member| is a new member
+which is just going to be created by the enforcement of this relation, then we
+define that the \code|?family|'s ID must equal the IDs of the \code|?member|
+and \code|?person|.  Thus, in this case and only in this case, new members
+force the creation of a new family even when there already is a family with the
+right name.
 
 The last two transformation relations extend the \code|member2person| relation
 for synchronizing between members in the role of a family mother or dauhter and
@@ -423,12 +449,12 @@ current state of the family, i.e., by checking if the respective parental role
 is still unset.  In the two \code|:right| clauses, we only need to specify that
 the \code|Person| \code|?person| is actually a \code|Female| or \code|Male|.
 
-These 32 lines of transformation specification plus the 9 lines for the
-\code|relationshipo| helper and two lines for the generation of the
+These 33 lines of transformation specification plus the 12 lines for the
+\code|relationshipo| helper, and two lines for the generation of the
 metamodel-specific relational querying APIs form the complete functional parts
 of the solution.  The only thing omitted from the paper are the namespace
-declaration\footnote{The Clojure equivalent of package statement and imports.}
-consisting of 5 lines of code.
+declaration\footnote{The Clojure equivalent of Java's package statement and
+  imports.}  consisting of 5 lines of code.
 
 
 \subsection{Gluing the Solution with the Framework}
@@ -514,7 +540,7 @@ in Clojure.
   The solution deletes the wrong one because from the perspective of the
   transformation, both are completely equivalent (since it doesn't consider
   birthdays).
-\item[IncrementalForward.testIncrementalDeletions] This is an \emph{expected
+\item[IncrementalForward.testIncrementalRename] This is an \emph{expected
     fail}.  After an intial transformation, all birthdays are changed in the
   person model.  Then, the source model family is renamed, and the
   transformation is re-executed.  This leads to deletion of all persons and
