@@ -90,7 +90,8 @@ explains how the solution is integrated into the \emph{benchmarx} framework.
 
 FunnyQT's bidirectional transformation DSL is based on its relational model
 querying DSL which in turn is based on the Clojure port of
-\emph{miniKanren}\footnote{\url{http://minikanren.org/}} which is called
+\emph{miniKanren}\footnote{\url{http://minikanren.org/}}~\cite{byrdthesis},
+which is called
 \emph{core.logic}\footnote{\url{https://github.com/clojure/core.logic}}.
 FunnyQT is able to generate a relational querying API for a given metamodel.
 Using that, a custom relation like the following can be written.  In there, the
@@ -508,6 +509,13 @@ in Clojure.
 \section{Evaluation \& Conclusion}
 \label{sec:evaluation}
 
+In this section, the FunnyQT solution's test results are presented and
+classified as requested by the case description.  Since FunnyQT's bidirectional
+transformation DSL is state-based and not incremental at all (and by design),
+many of the incremental tests are mostly out of scope.  However, in its core
+use case, non-incremental bidirectional transformations, the solution passes
+all tests.
+
 \begin{description}
 \item[BatchForward.*] All tests result in an \emph{expected pass}.
 \item[BatchBwdEandP.*] All tests result in an \emph{expected pass}.
@@ -589,6 +597,26 @@ in Clojure.
   transformation in the family model and we end up with an empty family
   register, not with a family register still containing an empty family.
 \end{description}
+
+In summary, the correctness is satisfying.  There is only one test which fails
+unexpectedly.  All other fails are expected and can hardly be solved by a
+non-incremental approach.
+
+A very weak point of the solution is its performance.  It is at least an order
+of magnitude slower than the other solutions already integrated in the
+benchmarx project (BiGUL, eMoflon, BXtend, MediniQVT).  Where their runtimes
+are in the tenth of seconds or below, the FunnyQT solution takes seconds.  With
+models in the size of thousands of elements, you might have to wait a bit for
+the transformation to finish.  The reason is that FunnyQT's bidirectional
+transformation DSL is built upon the relational programming library core.logic
+which is not tuned for performance but for simplicity and extensibility of its
+implementation, and probably FunnyQT doesn't use it in the best possible way.
+
+Other good points of the solution are its conciseness and simplicity.  With
+only 52 lines of code, it is by far the most concise solution currently
+integrated in the benchmarx project.  And it is quite simple to understand.
+The only complexities it has arise from the different alternatives depending on
+external parameters.
 
 
 \bibliographystyle{alpha}
