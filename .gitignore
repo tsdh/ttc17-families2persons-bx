@@ -17,3 +17,4 @@ doc/auto/
 *.out
 *.synctex.gz
 doc/_minted-ttc17-funnyqt-solution/
+doc/_minted-ttc17-funnyqt-solution-postproc/
