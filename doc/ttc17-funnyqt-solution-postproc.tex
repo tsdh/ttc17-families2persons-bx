@@ -20,6 +20,9 @@
 \newcommand{\code}{\clojureinline}
 \VerbatimFootnotes
 
+\usepackage{bigfoot}
+\DeclareNewFootnote[para]{default}
+
 \title{Solving the TTC Families to Persons Case with FunnyQT}
 \author{Tassilo Horn\\ \href{mailto:tsdh@gnu.org}{tsdh@gnu.org}}
 \institution{The GNU Project}
@@ -30,7 +33,7 @@
 \begin{abstract}
   This paper describes the FunnyQT solution to the bidirectional TTC 2017
   Families to Persons transformation case.  The solution is simple and concise
-  and passes all batch transformation and some of the incremental tests.
+  and passes all batch transformation and some incremental tests.
 \end{abstract}
 
 
@@ -40,23 +43,23 @@
 This paper describes the FunnyQT\footnote{\url{http://funnyqt.org}}
 ~\cite{diss,funnyqt-icgt15} solution of the TTC 2017 Families to Persons
 case~\cite{f2p-case-desc}.  With only 52 lines of declarative code, the
-solution is able to pass all batch transformation tests and some of the
-incremental tests.  The solution project is available on
-Github\footnote{\url{https://github.com/tsdh/ttc17-families2persons-bx}}, and
-it is integrated into the
+solution is able to pass all batch transformation tests and some incremental
+tests.  The solution project is available on
+Github\footnote{\url{https://github.com/tsdh/ttc17-families2persons-bx}} and it
+is integrated into the
 \emph{benchmarx}\footnote{\url{https://github.com/eMoflon/benchmarx/}}
 framework.
 
 FunnyQT is a model querying and transformation library for the functional Lisp
 dialect Clojure\footnote{\url{http://clojure.org}}.  Queries and
-transformations are Clojure programs using the features provided by the FunnyQT
-API.
+transformations are Clojure functions using the features provided by the
+FunnyQT API.
 
 Clojure provides strong metaprogramming capabilities that are used by FunnyQT
 in order to define several \emph{embedded domain-specific languages} (embedded
-DSL) for different querying and transformation tasks.
+DSL\cite{book:Fowler2010DSL}) for different querying and transformation tasks.
 
-FunnyQT is designed with extensibility in mind.  By default, it supports
+FunnyQT is designed to be extensible.  By default, it supports
 EMF~\cite{Steinberg2008EEM} and
 JGraLab~\footnote{\url{https://github.com/jgralab/jgralab}} TGraph models.
 Support for other modeling frameworks can be added without having to touch
@@ -92,15 +95,21 @@ As a first step, relational querying APIs for the two metamodels are generated.
 
 This makes the relations for the families metamodel available with the
 namespace alias \code|f| and those of the persons metamodel with alias
-\code|p|.
+\code|p|.  Relations are generated for every metamodel element.  For example,
+there's a relation \code|(f/Family f family)| which succeeds for every
+\code|family| in the given family model \code|f|.  There's a relation
+\code|(f/name f el n)| which succeeds if \code|el| is a member or family of the
+family model \code|f| whose name is \code|n|.  And there're reference relations
+like \code|(f/->sons f parent child)| which succeeds if \code|child| is a son
+of \code|parent|.
 
-Next, we define some helper relation which defines the possible kinds of
-relationships between a \code|family| and a family \code|member| depending on
-if we prefer to create parents over creating children (parameter
-\code|pref-parent|).  This is a higher-order relation in that the two remaining
-parameters are a parent relation \code|prel| (either \code|f/->father| or
-\code|f/->mother| has to be given) and a child relation (either
-\code|f/->daughters| or \code|f/->sons| has to be given).
+Before the transformation itself, we define a helper relation which defines the
+possible kinds of relationships between a \code|family| and a family
+\code|member| depending on if we prefer to create parents over creating
+children (parameter \code|pref-parent|).  This is a higher-order relation in
+that the two remaining parameters are a parent relation \code|prel| (either
+\code|f/->father| or \code|f/->mother|) and a child relation (either
+\code|f/->daughters| or \code|f/->sons|).
 
 \begin{clojurecode*}{linenos=true,firstnumber=last}
 (defn relationshipo [pref-parent f family member prel crel]
@@ -117,37 +126,41 @@ parameters are a parent relation \code|prel| (either \code|f/->father| or
    [(crel f family member)]))         ;; (5)
 \end{clojurecode*}
 
-\code|ccl/conda| is like a short-cutting logical OR.  The \(n\)-th clause is
-only tried if all preceeding clauses fail\footnote{In contrast to
-  \code|ccl/conde| which gives every clause a chance to succeed.}.  The first
-clause succeeds when we are transforming into the direction of the right model,
-i.e., the person register.  In this case, \code|member| may be in a parental
-role of family (\code|prel|), or it might be in a child role (\code|crel|).  We
-don't really care but want to ensure that all members of the given
-\code|family| are reachable, thus we use a non-short-cutting \code|ccl/conde|.
-All other clauses deal with transforming in the direction of the family model.
+\code|ccl/conda| is like a short-cutting logical disjunction.  The \(n\)-th
+clause is only tried if all preceeding clauses fail.  The first clause succeeds
+when we are transforming into the direction of the right model, i.e., the
+person register.  In this case, \code|member| may be in a parental role of
+family (\code|prel|), or it might be in a child role (\code|crel|).  We don't
+really care but want to ensure that all members of the given \code|family| are
+reachable, thus we use a non-short-cutting \code|ccl/conde| which gives both
+clauses a chance to succeed.
 
-The second clause deals with the case where \code|member| is an already
-existing element, i.e., not coming into being by the current execution of the
-transformation.  Here, we assume that this member is already properly assigned
-to a family, so we simply succeed without doing anything.
+All other clauses deal with transforming in the direction of the family model,
+i.e., the backward transformation.  The second clause deals with the case where
+\code|member| is an already existing element, i.e., not coming into being by
+the current execution of the transformation.  Here, we assume that this member
+is already properly assigned to a family, so we simply succeed without doing
+anything.
 
 In clause three, if we do not prefer assigning to parental roles, then the
 child relation \code|crel| must succeed between the \code|family| and the
-\code|member|.
+\code|member|.  The child relations can always succeed because a family can
+have an arbitrary number of daughters and sons.  Thus, in the remaining clauses
+we have to deal only with the case that we do prefer assigning to parental
+roles.
 
 In the fourth clause, if the \code|family|'s parental role is still unset or
 already assigned to \code|member|, then the parental relation must succeed
 between the \code|family| and the \code|member|.
 
 Lastly, if no clause has succeeded until now, then the child relation has to
-succeed.  Since a family can have an arbitrary number of children, this goal
-can always succeed.
+succeed.  As said, this goal\footnote{The application of a relation is called a
+  \emph{goal}.} can always succeed.
 
 \bigskip{}
 
-In the following, the actual transformation definition is explained.  It starts
-with the following.
+In the following, the actual transformation definition is explained.  It is
+defined using the \code|deftransformation| macro provided by FunnyQT.
 
 \begin{clojurecode*}{linenos=true,firstnumber=last}
 (bx/deftransformation families2persons [f p prefer-parent prefer-ex-family]
@@ -165,7 +178,7 @@ re-using existing families over creating new families for new family members.
 By default, bidirectional FunnyQT transformations will never delete elements
 from the current target model, i.e., the model in whose direction the
 synchronization is performed.  The reason for that behavior is that it allows
-to run the transformation first in one direction and then in the other
+to run the transformation in one direction first and then in the other
 direction in order to perform a full synchronization where missing elements are
 created in each of the two models.  Thus, after running a transformation, e.g.,
 in the direction of the right model, it is only ensured that for each element
@@ -180,17 +193,18 @@ deleted.
 The next option, \code|:id-init-fn|, has the following purpose.  In this
 transformation case, family members and persons don't have some kind of unique
 identity.  For example, it is allowed to have two members named Jim with the
-same name in the very same family Smith.  With FunnyQT's forall-there-exists
-semantics, it would suffice to create just one person in the right model with
-the name set to ``Smith, Jim''.  However, the case description mandates that we
-create one person for every member and vice versa, no matter if they can be
-distinguished based on their attribute values.  For such scenarios, FunnyQT's
-bidirectional transformation DSL provides a concept of synthetic ID attributes.
-The value of \code|:id-init-fn| has to be a function which returns a map from
-elements to their synthetic IDs.  The built-in function
-\code|bx/number-all-source-model-elements| returns a map where every element in
-the source model gets assigned a unique integer number.  These synthetic IDs
-are then used in a transformation relation which is discussed further below.
+same name in the very same family Smith.  However, FunnyQT BX transformations
+have forall-there-exists semantics where it would suffice to create just one
+person in the right model with the name set to ``Smith, Jim''.  But the case
+description mandates that we create one person for every member and vice versa,
+no matter if they can be distinguished based on their attribute values.  For
+such scenarios, FunnyQT's bidirectional transformation DSL provides a concept
+of synthetic ID attributes.  The value of \code|:id-init-fn| has to be a
+function which returns a map from elements to their synthetic IDs.  The
+built-in function \code|bx/number-all-source-model-elements| returns a map
+where every element in the source model gets assigned a unique integer number.
+These synthetic IDs are then used in a transformation relation which is
+discussed further below.
 
 The first transformation relation, \code|family-register2person-register|,
 transforms between family and person registers.
@@ -216,20 +230,20 @@ between the current \code|?family-register| and
 \code|?person-register|\footnote{Transformation relations are called with
   keyword parameters.  The two calls in the \code|:where| clause say that the
   current \code|?family-register| will be bound to the logic variable with the
-  same name in the called relation, and the same is true for the
+  same name in the called relation and the same is true for the
   \code|?person-register|.}.
 
 The next transformation relation, \code|member2person|, describes how family
 members of a family contained in a family register in the left model correspond
 to persons contained in a person register in the right model.  As can be seen,
 there's no goal describing how the \code|?family| and the \code|?member| are
-connected in the \code|:left| clause, and in the \code|:right| clause we're
-dealing just with a \code|?person| of class \code|Person| which is abstract.
-As such, this relation is not sufficient for the complete synchronization
-between members in the different roles of a family to females and males.
-Instead, it only captures the aspects that are common in the cases where
-mothers and daughters are synchronized with females and fathers and sons are
-synchronized with males.  Therefore, this relation is declared abstract.
+connected in the \code|:left| clause and in the \code|:right| clause we're
+dealing with just a \code|?person| of type \code|Person| which is an abstract
+class.  As such, this relation is not sufficient for the complete
+synchronization between members in the different roles of a family to females
+and males.  Instead, it only captures the aspects that are common in the cases
+where mothers and daughters are synchronized with females and fathers and sons
+are synchronized with males.  Therefore, this relation is declared abstract.
 
 \begin{clojurecode*}{linenos=true,firstnumber=last}
   (^:abstract member2person
@@ -287,8 +301,8 @@ force the creation of a new family even when there already is a family with the
 right name.
 
 The last two transformation relations extend the \code|member2person| relation
-for synchronizing between members in the role of a family mother or dauhter and
-female persons, and between family fathers or sons and male persons.
+for synchronizing between members in the role of a family mother or daughter
+and female persons and between family fathers or sons and male persons.
 
 \begin{clojurecode*}{linenos=true,firstnumber=last}
   (member2female
@@ -336,8 +350,7 @@ the \code|BXToolForEMF| class.  Essentially, it just has a static member
 public class FunnyQTFamiliesToPerson extends BXToolForEMF<FamilyRegister, PersonRegister, Decisions> {
     private final static Keyword LEFT = (Keyword) Clojure.read(":left");
     private final static Keyword RIGHT = (Keyword) Clojure.read(":right");
-
-    private final static IFn T;
+    private final static IFn T; // <-- The FunnyQT Transformation
 
     static {
         final String transformationNamespace = "ttc17-families2persons-bx.core";
@@ -360,9 +373,8 @@ using \code|invoke()|.  And exactly this is done to call the transformation.
     }
 \end{javacode}
 
-This corresponds to a call
-\code|(families2persons src trg dir prefer-parent prefer-ex-family)| directly
-in Clojure.
+This corresponds to a direct Clojure call
+\code|(families2persons src trg dir prefer-parent prefer-ex-family)|.
 
 \section{Evaluation \& Conclusion}
 \label{sec:evaluation}
@@ -407,17 +419,21 @@ of magnitude slower than the other solutions already integrated in the
 benchmarx project (BiGUL, eMoflon, BXtend, MediniQVT).  Where their runtimes
 are in the tenth of seconds or below, the FunnyQT solution takes seconds.  With
 models in the size of thousands of elements, you might have to wait a bit for
-the transformation to finish.  The reason is that FunnyQT's bidirectional
-transformation DSL is built upon the relational programming library core.logic
-which is not tuned for performance but for simplicity and extensibility of its
-implementation, and probably FunnyQT doesn't use it in the best possible way.
+the transformation to finish.  Ony reason is that the FunnyQT BX implementation
+is state-based and thus needs to recompute the correspondences between all
+elements in the source and target models on every invocation instead of just
+propagating small deltas like incremental approaches do.  Furthermore,
+FunnyQT's bidirectional transformation DSL is built upon the relational
+programming library
+\emph{core.logic}\footnote{\url{https://github.com/clojure/core.logic}} which
+is not tuned for performance but for simplicity and extensibility of its
+implementation and probably FunnyQT doesn't use it in the best possible way.
 
 Other good points of the solution are its conciseness and simplicity.  With
 only 52 lines of code, it is by far the most concise solution currently
 integrated in the benchmarx project.  And it is quite simple to understand.
 The only complexities it has arise from the different alternatives depending on
 external parameters.
-
 
 \bibliographystyle{alpha}
 \bibliography{ttc17-funnyqt-solution}
